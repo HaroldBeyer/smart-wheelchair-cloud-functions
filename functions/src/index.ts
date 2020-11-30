@@ -1,10 +1,8 @@
 import * as functions from 'firebase-functions';
 const cors = require('cors');
 import * as express from 'express';
-// const admin = require('firebase-admin');
 import * as admin from 'firebase-admin'
 import { Occurence } from './models.ts/classes';
-const crypto = require('crypto');
 admin.initializeApp();
 
 
@@ -15,7 +13,7 @@ app.use(cors({ origin: true }));
 
 
 export const receiveOccurence = functions.https.onRequest(async (request, response) => {
-    const key = 'iot';
+    // const key = 'iot';
     if (request.method != 'POST') {
         response.status(403).send('Forbidden');
         return;
@@ -25,18 +23,14 @@ export const receiveOccurence = functions.https.onRequest(async (request, respon
     let lt = request.body.lt;
     let ln = request.body.ln;
 
-    user = crypto.decrypt(user, key);
-    lt = crypto.decrypt(lt, key);
-    ln = crypto.decrypt(ln, key);
+    const day: string = (new Date().getDay() >= 10 ? new Date().getDay() : '0' + new Date().getDay()) + '/' + (new Date().getMonth() >= 10 ? new Date().getMonth() : '0' + new Date().getMonth()) + '/' + new Date().getFullYear();
 
-    const day = new Date().getDay() + '/' + new Date().getMonth() + '/' + new Date().getFullYear();
-    const hour = new Date().getHours() + ':' + new Date().getMinutes();
+    let hours = new Date().getHours() >= 10 ? new Date().getHours() : '0' + new Date().getHours();
+    let minutes = new Date().getMinutes() >= 10 ? new Date().getMinutes() : '0' + new Date().getMinutes();
+    const hour = hours + ':' + minutes;
 
     const occurence: Occurence = new Occurence(day, hour, { lt, ln });
-    await admin.database().ref('/occurences').child(user.uid).push(occurence);
+    await admin.database().ref('/occurences').child(user).push(occurence);
+
+    response.status(201).send("Occurrence succesfully inserted");
 });
-
-
-
-    //receive id
-    //receive body
