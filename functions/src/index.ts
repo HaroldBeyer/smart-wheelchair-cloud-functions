@@ -4,6 +4,7 @@ import * as express from 'express';
 // const admin = require('firebase-admin');
 import * as admin from 'firebase-admin'
 import { Occurence } from './models.ts/classes';
+const crypto = require('crypto');
 admin.initializeApp();
 
 
@@ -14,47 +15,25 @@ app.use(cors({ origin: true }));
 
 
 export const receiveOccurence = functions.https.onRequest(async (request, response) => {
-    let user;
-
+    const key = 'iot';
     if (request.method != 'POST') {
         response.status(403).send('Forbidden');
         return;
     }
 
-    if ((
-        !request.headers.authorization ||
-        !request.headers.authorization.startsWith('Bearer ')) &&
-        !(request.cookies && request.cookies.__session)) {
-        response.status(403).send('Unauthorized');
-        return;
-    }
+    let user = request.body.source;
+    let lt = request.body.lt;
+    let ln = request.body.ln;
 
-    let idToken;
-    if (request.headers.authorization && request.headers.authorization.startsWith('Bearer ')) {
-        console.log('Found "Authorization" header');
-        idToken = request.headers.authorization.split('Bearer ')[1];
-    } else if (request.cookies) {
-        console.log('Found "__session" cookie');
-        idToken = request.cookies.__session;
-    } else {
-        response.status(403).send('Unauthorized');
-        return;
-    }
+    user = crypto.decrypt(user, key);
+    lt = crypto.decrypt(lt, key);
+    ln = crypto.decrypt(ln, key);
 
-    try {
-        const decodedIdToken = await admin.auth().verifyIdToken(idToken);
-        console.log('ID Token correctly decoded', decodedIdToken);
-        user = decodedIdToken;
-        const obj = request.body;
-        const occurence: Occurence = new Occurence(obj.day, obj.hour, obj.location);
-        admin.database().ref('/occurences').child(user.uid).push(occurence);
-        return;
-    } catch (error) {
-        console.error('Error while verifying Firebase ID token:', error);
-        response.status(403).send('Unauthorized');
-        return;
-    }
+    const day = new Date().getDay() + '/' + new Date().getMonth() + '/' + new Date().getFullYear();
+    const hour = new Date().getHours() + ':' + new Date().getMinutes();
 
+    const occurence: Occurence = new Occurence(day, hour, { lt, ln });
+    await admin.database().ref('/occurences').child(user.uid).push(occurence);
 });
 
 

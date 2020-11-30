@@ -1,9 +1,9 @@
 export class Occurence {
-    day: Date;
+    day: string;
     hour: string;
     location: Location;
 
-    constructor(day: Date, hour: string, location: Location) {
+    constructor(day: string, hour: string, location: Location) {
         this.day = day;
         this.hour = hour;
         this.location = location;
